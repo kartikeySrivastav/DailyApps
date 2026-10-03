@@ -6,7 +6,8 @@
     "scripts":  {
                     "start":  "react-native start",
                     "android":  "react-native run-android",
-                    "build:android":  "cd android \u0026\u0026 gradlew.bat assembleDebug",
+                    "build":  "tsc --noEmit",
+                    "build:android":  "cd android && gradlew.bat assembleDebug",
                     "typecheck":  "tsc --noEmit"
                 },
     "dependencies":  {

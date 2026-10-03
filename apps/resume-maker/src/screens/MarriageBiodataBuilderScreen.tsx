@@ -382,12 +382,14 @@ export const MarriageBiodataBuilderScreen: React.FC<Props> = ({ navigation, rout
                       {biodata.personalInfo.photoUri ? (
                         <TouchableOpacity
                           activeOpacity={0.8}
-                          onPress={() =>
-                            setBiodata({
+                          onPress={() => {
+                            const updated = {
                               ...biodata,
                               personalInfo: { ...biodata.personalInfo, photoUri: '' },
-                            })
-                          }
+                            };
+                            setBiodata(updated);
+                            handleSaveToStorage(true, updated);
+                          }}
                           style={styles.photoRemoveBtn}
                         >
                           <Text style={styles.photoRemoveBtnText}>✕ Remove</Text>
