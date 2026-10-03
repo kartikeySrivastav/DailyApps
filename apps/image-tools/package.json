@@ -1,0 +1,31 @@
+{
+    "name":  "@dailyapps/app-image-tools",
+    "version":  "1.0.0",
+    "private":  true,
+    "main":  "index.js",
+    "scripts":  {
+                    "start":  "react-native start",
+                    "android":  "react-native run-android",
+                    "build:android":  "cd android \u0026\u0026 gradlew.bat assembleDebug",
+                    "typecheck":  "tsc --noEmit"
+                },
+    "dependencies":  {
+                         "@dailyapps/ads":  "*",
+                         "@dailyapps/analytics":  "*",
+                         "@dailyapps/config":  "*",
+                         "@dailyapps/media":  "*",
+                         "@dailyapps/navigation":  "*",
+                         "@dailyapps/permissions":  "*",
+                         "@dailyapps/storage":  "*",
+                         "@dailyapps/theme":  "*",
+                         "@dailyapps/ui":  "*",
+                         "@dailyapps/utils":  "*",
+                         "@react-native-async-storage/async-storage":  "^2.1.2",
+                         "@react-navigation/native":  "^7.0.14",
+                         "@react-navigation/native-stack":  "^7.2.0",
+                         "react":  "18.3.1",
+                         "react-native":  "0.76.6",
+                         "react-native-safe-area-context":  "^5.2.0",
+                         "react-native-screens":  "^4.6.0"
+                     }
+}

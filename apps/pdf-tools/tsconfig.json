@@ -1,0 +1,18 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "rootDir": "../..",
+    "outDir": "dist",
+    "jsx": "react-native",
+    "baseUrl": ".",
+    "paths": {
+      "@dailyapps/*": [
+        "../../packages/*/src"
+      ]
+    }
+  },
+  "include": [
+    "src/**/*",
+    "index.js"
+  ]
+}

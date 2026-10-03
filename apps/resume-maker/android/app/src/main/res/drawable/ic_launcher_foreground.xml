@@ -1,0 +1,41 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- Document Base Sheet -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M38,24 L62,24 L74,36 L74,80 C74,83.31 71.31,86 68,86 L38,86 C34.69,86 32,83.31 32,80 L32,30 C32,26.69 34.69,24 38,24 Z"/>
+    <!-- Folded Corner Flap -->
+    <path
+        android:fillColor="#93C5FD"
+        android:pathData="M62,24 L62,36 L74,36 Z"/>
+    <!-- Document Lines -->
+    <path
+        android:strokeColor="#2563EB"
+        android:strokeWidth="3.5"
+        android:strokeLineCap="round"
+        android:pathData="M40,44 L64,44"/>
+    <path
+        android:strokeColor="#60A5FA"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M40,53 L58,53"/>
+    <path
+        android:strokeColor="#93C5FD"
+        android:strokeWidth="3"
+        android:strokeLineCap="round"
+        android:pathData="M40,62 L52,62"/>
+    <!-- Success / Verified Badge Circle -->
+    <path
+        android:fillColor="#10B981"
+        android:pathData="M66,66 C71.52,66 76,70.48 76,76 C76,81.52 71.52,86 66,86 C60.48,86 56,81.52 56,76 C56,70.48 60.48,66 66,66 Z"/>
+    <!-- Checkmark -->
+    <path
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:pathData="M62,76 L65,79 L70.5,73"/>
+</vector>
