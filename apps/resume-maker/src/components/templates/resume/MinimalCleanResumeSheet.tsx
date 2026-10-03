@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ResumeProfile } from '../../../types/resume.types';
+import { ResumeAvatar } from '../../ResumeAvatar';
 
 interface Props {
   resume: ResumeProfile;
@@ -22,8 +23,20 @@ export const MinimalCleanResumeSheet: React.FC<Props> = ({ resume }) => {
       {/* Clean Minimal Header */}
       {!hidden.has('personalInfo') && (
         <View style={styles.header}>
-          <Text style={styles.candidateName}>{p.fullName || 'Candidate Name'}</Text>
-          <Text style={[styles.jobTitle, { color: accent }]}>{p.jobTitle || 'Graduate / Professional'}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.candidateName}>{p.fullName || 'Candidate Name'}</Text>
+              <Text style={[styles.jobTitle, { color: accent }]}>{p.jobTitle || 'Graduate / Professional'}</Text>
+            </View>
+            {p.photoUri ? (
+              <ResumeAvatar
+                photoUri={p.photoUri}
+                name={p.fullName}
+                size={58}
+                badgeBorderColor={accent}
+              />
+            ) : null}
+          </View>
           <View style={styles.contactRow}>
             <Text style={styles.contactItem}>{p.email}</Text>
             {p.phone ? <Text style={styles.dot}>•</Text> : null}

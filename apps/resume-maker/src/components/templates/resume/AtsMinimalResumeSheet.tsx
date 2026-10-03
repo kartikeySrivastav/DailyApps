@@ -1,6 +1,7 @@
 import React from 'react';
 import { View, Text, StyleSheet } from 'react-native';
 import { ResumeProfile } from '../../../types/resume.types';
+import { ResumeAvatar } from '../../ResumeAvatar';
 
 interface Props {
   resume: ResumeProfile;
@@ -28,6 +29,16 @@ export const AtsMinimalResumeSheet: React.FC<Props> = ({ resume }) => {
       {/* Centered ATS Clean Header */}
       {!hidden.has('personalInfo') && (
         <View style={styles.header}>
+          {p.photoUri ? (
+            <View style={{ marginBottom: 8, alignItems: 'center' }}>
+              <ResumeAvatar
+                photoUri={p.photoUri}
+                name={p.fullName}
+                size={54}
+                badgeBorderColor="#475569"
+              />
+            </View>
+          ) : null}
           <Text style={styles.nameText}>{(p.fullName || 'YOUR NAME').toUpperCase()}</Text>
           {p.jobTitle ? <Text style={styles.jobText}>{p.jobTitle}</Text> : null}
           {contactItems.length > 0 && (

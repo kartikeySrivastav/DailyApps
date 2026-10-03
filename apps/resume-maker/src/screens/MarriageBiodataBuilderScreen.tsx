@@ -772,12 +772,14 @@ export const MarriageBiodataBuilderScreen: React.FC<Props> = ({ navigation, rout
         onClose={() => setShowPhotoModal(false)}
         currentPhotoUri={biodata.personalInfo.photoUri}
         candidateName={biodata.personalInfo.fullName}
-        onSavePhoto={(photoUri) =>
-          setBiodata((prev) => ({
-            ...prev,
-            personalInfo: { ...prev.personalInfo, photoUri },
-          }))
-        }
+        onSavePhoto={(photoUri) => {
+          const updated = {
+            ...biodata,
+            personalInfo: { ...biodata.personalInfo, photoUri },
+          };
+          setBiodata(updated);
+          handleSaveToStorage(true, updated);
+        }}
       />
     </ScreenContainer>
   );

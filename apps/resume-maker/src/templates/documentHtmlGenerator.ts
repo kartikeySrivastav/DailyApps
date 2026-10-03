@@ -200,6 +200,16 @@ function generateMarriageBiodataHtml(bio: MarriageBiodataProfile): string {
     <div class="header-banner">
       ${!isModern && symbolIcon ? `<div class="auspicious-symbol">${symbolIcon}</div>` : ''}
       ${!isModern ? `<div class="auspicious-shloka">${bio.headerText || '॥ श्री गणेशाय नमः ॥'}</div>` : ''}
+      ${
+        bio.personalInfo.photoUri &&
+        (bio.personalInfo.photoUri.startsWith('http') ||
+          bio.personalInfo.photoUri.startsWith('data:') ||
+          bio.personalInfo.photoUri.startsWith('file:'))
+          ? `<div style="margin: 10px auto 14px auto; text-align: center;">
+              <img src="${bio.personalInfo.photoUri}" alt="${bio.personalInfo.fullName}" style="width: 100px; height: 120px; object-fit: cover; border-radius: 8px; border: 3px solid ${accent}; box-shadow: 0 4px 12px rgba(0,0,0,0.12);" />
+            </div>`
+          : ''
+      }
       <h1 class="candidate-name">${bio.personalInfo.fullName}</h1>
       <span class="subtitle-badge">${isModern ? 'MATRIMONIAL PROFILE' : 'विवाह बायोडाटा / Matrimonial Profile'}</span>
     </div>
@@ -508,16 +518,26 @@ function generateResumeHtml(resume: ResumeProfile): string {
 </head>
 <body>
   <div class="page-container">
-    <div class="header">
-      <h1>${resume.personalInfo.fullName}</h1>
-      <div class="job-title">${resume.personalInfo.jobTitle}</div>
-      <div class="contact-bar">
-        <span>📧 ${resume.personalInfo.email}</span>
-        <span>📱 ${resume.personalInfo.phone}</span>
-        <span>📍 ${resume.personalInfo.location}</span>
-        ${resume.personalInfo.linkedin ? `<span>🔗 ${resume.personalInfo.linkedin}</span>` : ''}
-        ${resume.personalInfo.githubOrPortfolio ? `<span>💻 ${resume.personalInfo.githubOrPortfolio}</span>` : ''}
+    <div class="header" style="display: flex; align-items: center; justify-content: space-between; gap: 20px;">
+      <div style="flex: 1;">
+        <h1>${resume.personalInfo.fullName}</h1>
+        <div class="job-title">${resume.personalInfo.jobTitle}</div>
+        <div class="contact-bar">
+          <span>📧 ${resume.personalInfo.email}</span>
+          <span>📱 ${resume.personalInfo.phone}</span>
+          <span>📍 ${resume.personalInfo.location}</span>
+          ${resume.personalInfo.linkedin ? `<span>🔗 ${resume.personalInfo.linkedin}</span>` : ''}
+          ${resume.personalInfo.githubOrPortfolio ? `<span>💻 ${resume.personalInfo.githubOrPortfolio}</span>` : ''}
+        </div>
       </div>
+      ${
+        resume.personalInfo.photoUri &&
+        (resume.personalInfo.photoUri.startsWith('http') ||
+          resume.personalInfo.photoUri.startsWith('data:') ||
+          resume.personalInfo.photoUri.startsWith('file:'))
+          ? `<img src="${resume.personalInfo.photoUri}" alt="${resume.personalInfo.fullName}" style="width: 76px; height: 76px; border-radius: 38px; object-fit: cover; border: 2.5px solid ${accent}; flex-shrink: 0;" />`
+          : ''
+      }
     </div>
 
     ${

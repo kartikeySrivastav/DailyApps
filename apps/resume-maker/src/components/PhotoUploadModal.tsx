@@ -9,8 +9,11 @@ import {
   Image,
   ScrollView,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useTheme } from '@dailyapps/theme';
+import { getFilePickerAdapter } from '@dailyapps/media';
+import { checkPermission, requestPermission } from '@dailyapps/permissions';
 
 interface Props {
   visible: boolean;
@@ -38,7 +41,7 @@ const PROFESSIONAL_PORTRAITS = [
     id: 'port_dev_m',
     label: 'Developer (M)',
     url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-    fallbackIcon: '👨‍💼',
+    fallbackIcon: '👨‍💻',
   },
   {
     id: 'port_des_f',
@@ -101,7 +104,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
   onSavePhoto,
 }) => {
   const theme = useTheme();
-  const [activeTab, setActiveTab] = useState<'url' | 'portraits' | 'logos' | 'monogram'>('portraits');
+  const [activeTab, setActiveTab] = useState<'device' | 'portraits' | 'url' | 'logos' | 'monogram'>('device');
   const [inputUrl, setInputUrl] = useState<string>(
     currentPhotoUri?.startsWith('http') || currentPhotoUri?.startsWith('file://')
       ? currentPhotoUri
@@ -109,6 +112,8 @@ export const PhotoUploadModal: React.FC<Props> = ({
   );
   const [selectedPhoto, setSelectedPhoto] = useState<string>(currentPhotoUri || '');
   const [selectedColor, setSelectedColor] = useState<string>('#2563EB');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   const initials =
     candidateName
@@ -120,7 +125,168 @@ export const PhotoUploadModal: React.FC<Props> = ({
       .slice(0, 2) || 'RS';
 
   const isRemoteImage = (uri?: string) =>
-    uri?.startsWith('http://') || uri?.startsWith('https://') || uri?.startsWith('file://') || uri?.startsWith('data:');
+    uri?.startsWith('http://') ||
+    uri?.startsWith('https://') ||
+    uri?.startsWith('file://') ||
+    uri?.startsWith('data:') ||
+    uri?.startsWith('content://');
+
+  // ─── CAMERA CAPTURE HANDLER ───
+  const handleLaunchCamera = async () => {
+    setIsLoading(true);
+    setStatusMessage(null);
+
+    try {
+      // 1. Native adapter if registered
+      const adapter = getFilePickerAdapter();
+      if (adapter && typeof adapter.takePhoto === 'function') {
+        const hasPerm = await checkPermission('camera');
+        if (!hasPerm) {
+          const res = await requestPermission('camera', {
+            title: 'Camera Permission',
+            message: 'Camera access is required to take your profile headshot.',
+            buttonPositive: 'Allow Camera',
+            buttonNegative: 'Cancel',
+          });
+          if (res !== 'granted') {
+            Alert.alert('Permission Denied', 'Camera permission was not granted.');
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        const picked = await adapter.takePhoto({ quality: 0.85, maxWidth: 800, maxHeight: 800 });
+        if (picked?.uri) {
+          setSelectedPhoto(picked.uri);
+          setInputUrl(picked.uri);
+          setStatusMessage('✓ Camera photo captured successfully');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 2. Web / Browser fallback (HTML5 camera capture input)
+      const globalDoc: any = typeof globalThis !== 'undefined' ? (globalThis as any).document : null;
+      const GlobalFileReader: any = typeof globalThis !== 'undefined' ? (globalThis as any).FileReader : null;
+      if (globalDoc && GlobalFileReader) {
+        const input = globalDoc.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.setAttribute('capture', 'user'); // Triggers front camera on mobile/tablet browsers
+        input.onchange = (e: any) => {
+          const file = e.target?.files?.[0];
+          if (file) {
+            const reader = new GlobalFileReader();
+            reader.onload = (loadEvent: any) => {
+              const dataUri = loadEvent.target?.result as string;
+              if (dataUri) {
+                setSelectedPhoto(dataUri);
+                setInputUrl(dataUri);
+                setStatusMessage(`✓ Photo captured (${file.name || 'camera_snap.jpg'})`);
+              }
+              setIsLoading(false);
+            };
+            reader.onerror = () => {
+              Alert.alert('Capture Error', 'Could not read camera capture stream.');
+              setIsLoading(false);
+            };
+            reader.readAsDataURL(file);
+          } else {
+            setIsLoading(false);
+          }
+        };
+        input.click();
+        return;
+      }
+
+      Alert.alert(
+        'Camera Ready',
+        'Please select a photo from your gallery, paste an image link, or choose an executive headshot preset.'
+      );
+    } catch (err: any) {
+      Alert.alert('Camera Error', err?.message || 'Unable to open camera.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // ─── FILE / GALLERY PICKER HANDLER ───
+  const handleLaunchFilePicker = async () => {
+    setIsLoading(true);
+    setStatusMessage(null);
+
+    try {
+      // 1. Native adapter if registered
+      const adapter = getFilePickerAdapter();
+      if (adapter && typeof adapter.pickImage === 'function') {
+        const hasPerm = await checkPermission('media');
+        if (!hasPerm) {
+          const res = await requestPermission('media', {
+            title: 'Photos & Files Access',
+            message: 'Access is needed to select your resume photo from your device.',
+            buttonPositive: 'Allow Access',
+            buttonNegative: 'Cancel',
+          });
+          if (res !== 'granted') {
+            Alert.alert('Permission Denied', 'Device storage permission was not granted.');
+            setIsLoading(false);
+            return;
+          }
+        }
+
+        const picked = await adapter.pickImage({ quality: 0.85, maxWidth: 800, maxHeight: 800 });
+        if (picked?.uri) {
+          setSelectedPhoto(picked.uri);
+          setInputUrl(picked.uri);
+          setStatusMessage('✓ Photo loaded from device storage');
+          setIsLoading(false);
+          return;
+        }
+      }
+
+      // 2. Web / Browser fallback (HTML5 file dialog)
+      const globalDoc: any = typeof globalThis !== 'undefined' ? (globalThis as any).document : null;
+      const GlobalFileReader: any = typeof globalThis !== 'undefined' ? (globalThis as any).FileReader : null;
+      if (globalDoc && GlobalFileReader) {
+        const input = globalDoc.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/png,image/jpeg,image/jpg,image/webp,image/heic';
+        input.onchange = (e: any) => {
+          const file = e.target?.files?.[0];
+          if (file) {
+            const reader = new GlobalFileReader();
+            reader.onload = (loadEvent: any) => {
+              const dataUri = loadEvent.target?.result as string;
+              if (dataUri) {
+                setSelectedPhoto(dataUri);
+                setInputUrl(dataUri);
+                setStatusMessage(`✓ Loaded: ${file.name} (${Math.round(file.size / 1024)} KB)`);
+              }
+              setIsLoading(false);
+            };
+            reader.onerror = () => {
+              Alert.alert('File Error', 'Could not read image file.');
+              setIsLoading(false);
+            };
+            reader.readAsDataURL(file);
+          } else {
+            setIsLoading(false);
+          }
+        };
+        input.click();
+        return;
+      }
+
+      Alert.alert(
+        'File Selector Ready',
+        'Please enter or paste your image file path or URL in the Upload tab.'
+      );
+    } catch (err: any) {
+      Alert.alert('File Selector Error', err?.message || 'Unable to open file selector.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleApply = () => {
     if (activeTab === 'url') {
@@ -133,7 +299,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
       onSavePhoto(`monogram:${initials}:${selectedColor}`);
     } else {
       if (!selectedPhoto) {
-        Alert.alert('Selection Needed', 'Please select a photo or logo.');
+        Alert.alert('Selection Needed', 'Please select or capture a photo first.');
         return;
       }
       onSavePhoto(selectedPhoto);
@@ -145,6 +311,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
     onSavePhoto('');
     setSelectedPhoto('');
     setInputUrl('');
+    setStatusMessage('Photo cleared');
     onClose();
   };
 
@@ -164,10 +331,10 @@ export const PhotoUploadModal: React.FC<Props> = ({
           <View style={styles.headerRow}>
             <View>
               <Text style={[styles.title, { color: theme.colors.text }]}>
-                Photo & Logo Manager
+                Photo & Profile Image Manager
               </Text>
               <Text style={[styles.subtitle, { color: theme.colors.textMuted }]}>
-                Select photo or corporate logo for your resume & biodata
+                Capture via camera, select from device, or choose curated portraits
               </Text>
             </View>
             <TouchableOpacity onPress={onClose} style={styles.closeBtn}>
@@ -221,13 +388,84 @@ export const PhotoUploadModal: React.FC<Props> = ({
                 {candidateName}
               </Text>
               <Text style={[styles.previewSub, { color: theme.colors.textMuted }]}>
-                Visible in template headers, live preview & PDF downloads
+                {statusMessage || (selectedPhoto ? 'Photo selected • Ready to apply' : 'No custom photo selected yet')}
               </Text>
+              {selectedPhoto ? (
+                <View style={styles.badgeRow}>
+                  <View style={styles.activePill}>
+                    <Text style={styles.activePillText}>✓ Photo Ready</Text>
+                  </View>
+                </View>
+              ) : null}
             </View>
+
+            {/* Quick Clear Button if photo is loaded */}
+            {selectedPhoto ? (
+              <TouchableOpacity
+                onPress={() => {
+                  setSelectedPhoto('');
+                  setInputUrl('');
+                  setStatusMessage('Photo cleared');
+                }}
+                style={styles.inlineClearBtn}
+              >
+                <Text style={styles.inlineClearText}>Clear</Text>
+              </TouchableOpacity>
+            ) : null}
           </View>
 
-          {/* 4 Tabs: [ Headshots | File/URL | Logos | Monogram ] */}
+          {/* Quick Capture Action Bar (Camera + Device File) */}
+          <View style={styles.quickActionRow}>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleLaunchCamera}
+              disabled={isLoading}
+              style={[styles.primaryActionBtn, { backgroundColor: '#2563EB' }]}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.primaryActionIcon}>📸</Text>
+                  <Text style={styles.primaryActionText}>Take Photo (Camera)</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={handleLaunchFilePicker}
+              disabled={isLoading}
+              style={[styles.primaryActionBtn, { backgroundColor: '#4F46E5' }]}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <>
+                  <Text style={styles.primaryActionIcon}>📁</Text>
+                  <Text style={styles.primaryActionText}>Choose File / Gallery</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+
+          {/* 5 Tabs: [ Device | Portraits | URL/File | Logos | Monogram ] */}
           <View style={styles.tabRow}>
+            <TouchableOpacity
+              activeOpacity={0.8}
+              onPress={() => setActiveTab('device')}
+              style={[styles.tabBtn, activeTab === 'device' && styles.activeTabBtn]}
+            >
+              <Text
+                style={[
+                  styles.tabBtnText,
+                  { color: activeTab === 'device' ? '#2563EB' : theme.colors.textMuted },
+                ]}
+              >
+                Device / Cam
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               activeOpacity={0.8}
               onPress={() => setActiveTab('portraits')}
@@ -254,7 +492,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
                   { color: activeTab === 'url' ? '#2563EB' : theme.colors.textMuted },
                 ]}
               >
-                Upload / URL
+                URL / Path
               </Text>
             </TouchableOpacity>
 
@@ -289,6 +527,59 @@ export const PhotoUploadModal: React.FC<Props> = ({
             </TouchableOpacity>
           </View>
 
+          {/* TAB 0: Device / Camera Tab Content */}
+          {activeTab === 'device' && (
+            <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.deviceBox}>
+              <View style={[styles.infoBanner, { backgroundColor: theme.isDark ? '#1E293B' : '#EFF6FF' }]}>
+                <Text style={styles.infoBannerIcon}>💡</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.infoBannerTitle, { color: theme.colors.text }]}>
+                    High-Resolution Headshot Tips
+                  </Text>
+                  <Text style={[styles.infoBannerBody, { color: theme.colors.textMuted }]}>
+                    Use good front lighting, maintain a neutral or friendly smile, and keep your face centered. Supports JPG, PNG, WebP up to 15 MB.
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.deviceOptionsGrid}>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleLaunchCamera}
+                  style={[styles.deviceOptionCard, { borderColor: theme.colors.border }]}
+                >
+                  <Text style={{ fontSize: 32 }}>📸</Text>
+                  <Text style={[styles.deviceOptionTitle, { color: theme.colors.text }]}>
+                    Take Selfie / Headshot
+                  </Text>
+                  <Text style={[styles.deviceOptionSub, { color: theme.colors.textMuted }]}>
+                    Opens front camera to snap a live executive portrait
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={handleLaunchFilePicker}
+                  style={[styles.deviceOptionCard, { borderColor: theme.colors.border }]}
+                >
+                  <Text style={{ fontSize: 32 }}>🖼️</Text>
+                  <Text style={[styles.deviceOptionTitle, { color: theme.colors.text }]}>
+                    Select from Gallery
+                  </Text>
+                  <Text style={[styles.deviceOptionSub, { color: theme.colors.textMuted }]}>
+                    Pick any high-res picture or scanned photo from phone/PC
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {statusMessage ? (
+                <View style={styles.statusToast}>
+                  <Text style={styles.statusToastText}>{statusMessage}</Text>
+                </View>
+              ) : null}
+            </ScrollView>
+          )}
+
           {/* TAB 1: Professional Portraits */}
           {activeTab === 'portraits' && (
             <ScrollView
@@ -301,7 +592,10 @@ export const PhotoUploadModal: React.FC<Props> = ({
                   <TouchableOpacity
                     key={item.id}
                     activeOpacity={0.8}
-                    onPress={() => setSelectedPhoto(item.url)}
+                    onPress={() => {
+                      setSelectedPhoto(item.url);
+                      setStatusMessage(`Selected: ${item.label}`);
+                    }}
                     style={[
                       styles.portraitCard,
                       {
@@ -335,7 +629,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
           {activeTab === 'url' && (
             <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.urlBox}>
               <Text style={[styles.inputLabel, { color: theme.colors.text }]}>
-                Image URL or Local File Path
+                Image URL or Local Storage File Path
               </Text>
               <TextInput
                 style={[
@@ -367,6 +661,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
                     const sample = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400';
                     setInputUrl(sample);
                     setSelectedPhoto(sample);
+                    setStatusMessage('Applied Executive Headshot demo');
                   }}
                   style={[styles.quickChip, { borderColor: theme.colors.border }]}
                 >
@@ -381,6 +676,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
                     const sample = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400';
                     setInputUrl(sample);
                     setSelectedPhoto(sample);
+                    setStatusMessage('Applied Corporate Headshot demo');
                   }}
                   style={[styles.quickChip, { borderColor: theme.colors.border }]}
                 >
@@ -408,7 +704,10 @@ export const PhotoUploadModal: React.FC<Props> = ({
                   <TouchableOpacity
                     key={logo.id}
                     activeOpacity={0.8}
-                    onPress={() => setSelectedPhoto(logo.code)}
+                    onPress={() => {
+                      setSelectedPhoto(logo.code);
+                      setStatusMessage(`Selected Logo: ${logo.label}`);
+                    }}
                     style={[
                       styles.logoCard,
                       {
@@ -468,7 +767,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
 
           {/* Modal Action Buttons: [ Remove ] & [ Apply Photo ] */}
           <View style={styles.btnRow}>
-            {currentPhotoUri ? (
+            {currentPhotoUri || selectedPhoto ? (
               <TouchableOpacity
                 activeOpacity={0.8}
                 onPress={handleRemove}
@@ -483,7 +782,7 @@ export const PhotoUploadModal: React.FC<Props> = ({
               onPress={handleApply}
               style={styles.applyBtn}
             >
-              <Text style={styles.applyBtnText}>Apply to Resume</Text>
+              <Text style={styles.applyBtnText}>Apply Photo to Document</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -503,7 +802,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 24,
     borderTopWidth: 1,
     padding: 20,
-    maxHeight: '90%',
+    maxHeight: '92%',
   },
   handle: {
     width: 44,
@@ -517,7 +816,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 14,
+    marginBottom: 12,
   },
   title: {
     fontSize: 18,
@@ -536,7 +835,7 @@ const styles = StyleSheet.create({
     gap: 14,
     padding: 12,
     borderRadius: 14,
-    marginBottom: 14,
+    marginBottom: 12,
   },
   previewCircle: {
     width: 68,
@@ -561,6 +860,56 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     marginTop: 2,
     lineHeight: 16,
+  },
+  badgeRow: {
+    flexDirection: 'row',
+    marginTop: 4,
+  },
+  activePill: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  activePillText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  inlineClearBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#FEE2E2',
+  },
+  inlineClearText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  quickActionRow: {
+    flexDirection: 'row',
+    gap: 10,
+    marginBottom: 12,
+  },
+  primaryActionBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
+  primaryActionIcon: {
+    fontSize: 16,
+  },
+  primaryActionText: {
+    color: '#FFFFFF',
+    fontSize: 13,
+    fontWeight: '700',
   },
   monogramCircle: {
     width: '100%',
@@ -623,7 +972,66 @@ const styles = StyleSheet.create({
     borderBottomColor: '#2563EB',
   },
   tabBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  deviceBox: {
+    paddingVertical: 6,
+    gap: 12,
+  },
+  infoBanner: {
+    flexDirection: 'row',
+    gap: 10,
+    padding: 12,
+    borderRadius: 10,
+    alignItems: 'flex-start',
+  },
+  infoBannerIcon: {
+    fontSize: 18,
+    marginTop: 1,
+  },
+  infoBannerTitle: {
     fontSize: 12.5,
+    fontWeight: '700',
+  },
+  infoBannerBody: {
+    fontSize: 11,
+    lineHeight: 16,
+    marginTop: 2,
+  },
+  deviceOptionsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  deviceOptionCard: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    gap: 6,
+  },
+  deviceOptionTitle: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  deviceOptionSub: {
+    fontSize: 10.5,
+    lineHeight: 14,
+    textAlign: 'center',
+  },
+  statusToast: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    padding: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  statusToastText: {
+    color: '#059669',
+    fontSize: 12,
     fontWeight: '700',
   },
   gridContainer: {

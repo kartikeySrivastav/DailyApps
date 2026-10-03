@@ -48,6 +48,7 @@ export const LivePreviewScreen: React.FC<Props> = ({ navigation, route }) => {
           ...base.personalInfo,
           ...b.personalInfo,
           fullName: b.personalInfo?.fullName || base.personalInfo.fullName,
+          photoUri: b.personalInfo?.photoUri !== undefined ? b.personalInfo.photoUri : base.personalInfo.photoUri,
         },
         educationAndCareer: {
           ...base.educationAndCareer,
@@ -80,6 +81,7 @@ export const LivePreviewScreen: React.FC<Props> = ({ navigation, route }) => {
           ...r.personalInfo,
           fullName: r.personalInfo?.fullName || base.personalInfo.fullName,
           jobTitle: r.personalInfo?.jobTitle || base.personalInfo.jobTitle,
+          photoUri: r.personalInfo?.photoUri !== undefined ? r.personalInfo.photoUri : base.personalInfo.photoUri,
         },
         experience: r.experience && r.experience.length > 0 ? r.experience : base.experience,
         education: r.education && r.education.length > 0 ? r.education : base.education,
